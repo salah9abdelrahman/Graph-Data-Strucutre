@@ -239,7 +239,7 @@ public abstract class Graph {
 
 	/** Main method provided with some basic tests. */
 	public static void main(String[] args) {
-		GraphLoader.createIntersectionsFile("data/maps/myneighborhood.map", "data/intersections/myneighborhood.intersections");
+		GraphLoader.createIntersectionsFile("data/testdata/simpletest.map", "data/intersections/simpletest.intersections");
 		// GraphLoader.createIntersectionsFile("data/maps/ucsd.map", "data/intersections/ucsd.intersections");
 
 		// For testing of Part 1 functionality
