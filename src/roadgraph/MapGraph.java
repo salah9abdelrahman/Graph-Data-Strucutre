@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -142,17 +143,17 @@ public class MapGraph {
 		if ((startNode == null) || (goalNode == null)) {
 			return new LinkedList<>();
 		}
-		// Hook for visualization. See writeup.
-		// nodeSearched.accept(next.getLocation());
+
 		HashMap<MapNode, MapNode> parentMap = new HashMap<>();
-		boolean found = bfsSearch(startNode, goalNode, parentMap);
+		boolean found = bfsSearch(startNode, goalNode, parentMap, nodeSearched);
 		if (!found) {
 			return new ArrayList<GeographicPoint>();
 		}
 		return constructPath(startNode, goalNode, parentMap);
 	}
 
-	private boolean bfsSearch(MapNode startNode, MapNode goalNode, HashMap<MapNode, MapNode> parentMap) {
+	private boolean bfsSearch(MapNode startNode, MapNode goalNode, HashMap<MapNode, MapNode> parentMap,
+			Consumer<GeographicPoint> nodeSearched) {
 		Queue<MapNode> toExplore = new LinkedList<>();
 		HashSet<MapNode> visited = new HashSet<>();
 		boolean found = false;
@@ -169,6 +170,8 @@ public class MapGraph {
 			while (it.hasPrevious()) {
 				MapNode next = vertices.get(it.previous().getEnd());
 				if (!visited.contains(next)) {
+					// Hook for visualization. See writeup.
+					nodeSearched.accept(next.getLocation());
 					visited.add(next);
 					parentMap.put(next, curr);
 					toExplore.add(next);
@@ -179,7 +182,16 @@ public class MapGraph {
 		return found;
 	}
 
-	private List<GeographicPoint> constructPath(MapNode startNode, MapNode goalNode, HashMap<MapNode, MapNode> parentMap){
+	/**
+	 * construct a path between two nodes in the graph
+	 * 
+	 * @param startNode the start node
+	 * @param goalNode  the goal
+	 * @param parentMap
+	 * @return path between two nodes
+	 */
+	private List<GeographicPoint> constructPath(MapNode startNode, MapNode goalNode,
+			HashMap<MapNode, MapNode> parentMap) {
 		LinkedList<GeographicPoint> path = new LinkedList<GeographicPoint>();
 		MapNode curr = goalNode;
 		while (startNode != curr) {
@@ -218,12 +230,55 @@ public class MapGraph {
 	 */
 	public List<GeographicPoint> dijkstra(GeographicPoint start, GeographicPoint goal,
 			Consumer<GeographicPoint> nodeSearched) {
-		// TODO: Implement this method in WEEK 4
+		MapNode startNode = vertices.get(start);
+		MapNode goalNode = vertices.get(goal);
+		if ((startNode == null) || (goalNode == null)) {
+			return new LinkedList<>();
+		}
+		PriorityQueue<MapNode> pq = new PriorityQueue<>();
+		HashSet<MapNode> visited = new HashSet<>();
+		HashMap<MapNode, MapNode> parentMap = new HashMap<>();
+		boolean found = false;
+		for (MapNode mapNode : vertices.values()) {
+			mapNode.setDistance(Double.MAX_VALUE);
+		}
+		startNode.setDistance(0);
+		pq.add(startNode);
+		while (!pq.isEmpty()) {
+			MapNode curr = pq.remove();
+			if (!visited.contains(curr)) {
+				visited.add(curr);
+				if (curr.getLocation().equals(goalNode.getLocation())) {
+					found = true;
+					break;
+				}
+				List<MapEdge> neighbors = curr.getEdges();
+				ListIterator<MapEdge> it = neighbors.listIterator(neighbors.size());
+				while (it.hasPrevious()) {
+					MapEdge currentEdge = it.previous();
+					MapNode next = vertices.get(currentEdge.getEnd());
+					if ((!visited.contains(next))) {
+						if (next.getDistance() > (currentEdge.getLength() + curr.getDistance())) {
+							parentMap.put(next, curr);
+							next.setDistance(currentEdge.getLength() + curr.getDistance());
+							pq.add(next);
 
+						}
+
+					}
+				}
+
+			}
+		}
+
+		if (!found) {
+			return new ArrayList<GeographicPoint>();
+
+		}
+		return constructPath(startNode, goalNode, parentMap);
 		// Hook for visualization. See writeup.
 		// nodeSearched.accept(next.getLocation());
 
-		return null;
 	}
 
 	/**
@@ -264,9 +319,9 @@ public class MapGraph {
 	public static void main(String[] args) {
 		System.out.print("Making a new map...");
 		MapGraph firstMap = new MapGraph();
-		System.out.print("DONE. \nLoading the map...");
+		// System.out.print("DONE. \nLoading the map...");
 		GraphLoader.loadRoadMap("data/testdata/simpletest.map", firstMap);
-		System.out.println("DONE.");
+		// System.out.println("DONE.");
 
 		// test add vertex and add edge
 		// System.out.println(firstMap.getNumVertices());
@@ -280,6 +335,15 @@ public class MapGraph {
 		// }
 		// You can use this method for testing.
 
+		// PriorityQueue<MapNode> mapNodes = new PriorityQueue<>();
+		// mapNodes.add(new MapNode(20));
+		// mapNodes.add(new MapNode(10));
+		// mapNodes.add(new MapNode(15));
+		// // ListIterator<WeightedMapNode> listIterator = mapNodes.iterator();
+		// while (mapNodes.size() != 0) {
+		// System.out.println(mapNodes.remove());
+		// }
+
 		/*
 		 * Here are some test cases you should try before you attempt the Week 3 End of
 		 * Week Quiz, EVEN IF you score 100% on the programming assignment.
@@ -290,18 +354,18 @@ public class MapGraph {
 
 		GeographicPoint testStart = new GeographicPoint(1.0, 1.0);
 		GeographicPoint testEnd = new GeographicPoint(8.0, -1.0);
-		List<GeographicPoint> path = simpleTestMap.bfs(testStart, testEnd);
-		for (GeographicPoint geographicPoint : path) {
+		// List<GeographicPoint> path = simpleTestMap.bfs(testStart, testEnd);
+		// for (GeographicPoint geographicPoint : path) {
+		// System.out.println(geographicPoint);
+		// }
+
+		System.out.println("Test 1 using simpletest: Dijkstra should be 9 and AStar should be 5");
+		List<GeographicPoint> testroute = simpleTestMap.dijkstra(testStart, testEnd);
+		for (GeographicPoint geographicPoint : testroute) {
 			System.out.println(geographicPoint);
 		}
-
+		// List<GeographicPoint> testroute2 = simpleTestMap.aStarSearch(testStart, testEnd);
 		/*
-		 * System.out.
-		 * println("Test 1 using simpletest: Dijkstra should be 9 and AStar should be 5"
-		 * ); List<GeographicPoint> testroute = simpleTestMap.dijkstra(testStart,
-		 * testEnd); List<GeographicPoint> testroute2 =
-		 * simpleTestMap.aStarSearch(testStart, testEnd);
-		 * 
 		 * 
 		 * MapGraph testMap = new MapGraph();
 		 * GraphLoader.loadRoadMap("data/maps/utc.map", testMap);
