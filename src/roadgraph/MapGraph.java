@@ -190,10 +190,9 @@ public class MapGraph {
 	 * @param parentMap
 	 * @return path between two nodes
 	 */
-	private List<GeographicPoint> constructPath(MapNode startNode, MapNode goalNode,
-			HashMap<MapNode, MapNode> parentMap) {
+	private <T extends MapNode> List<GeographicPoint> constructPath(T startNode, T goalNode, HashMap<T, T> parentMap) {
 		LinkedList<GeographicPoint> path = new LinkedList<GeographicPoint>();
-		MapNode curr = goalNode;
+		T curr = goalNode;
 		while (startNode != curr) {
 			path.addFirst(curr.getLocation());
 			curr = parentMap.get(curr);
@@ -230,22 +229,26 @@ public class MapGraph {
 	 */
 	public List<GeographicPoint> dijkstra(GeographicPoint start, GeographicPoint goal,
 			Consumer<GeographicPoint> nodeSearched) {
-		MapNode startNode = vertices.get(start);
-		MapNode goalNode = vertices.get(goal);
+		WeightedMapNode startNode = new WeightedMapNode(vertices.get(start));
+		WeightedMapNode goalNode = new WeightedMapNode(vertices.get(goal));
 		if ((startNode == null) || (goalNode == null)) {
 			return new LinkedList<>();
 		}
-		PriorityQueue<MapNode> pq = new PriorityQueue<>();
-		HashSet<MapNode> visited = new HashSet<>();
-		HashMap<MapNode, MapNode> parentMap = new HashMap<>();
+		HashMap<GeographicPoint, WeightedMapNode> dijkstraVertices = new HashMap<>();
+		PriorityQueue<WeightedMapNode> pq = new PriorityQueue<>();
+		HashSet<WeightedMapNode> visited = new HashSet<>();
+		HashMap<WeightedMapNode, WeightedMapNode> parentMap = new HashMap<>();
 		boolean found = false;
-		for (MapNode mapNode : vertices.values()) {
-			mapNode.setDistance(Double.MAX_VALUE);
+		// init
+		for (MapNode mapNode : this.vertices.values()) {
+			dijkstraVertices.put(mapNode.location, new WeightedMapNode(mapNode, Double.MAX_VALUE));
+			
 		}
+
 		startNode.setDistance(0);
 		pq.add(startNode);
 		while (!pq.isEmpty()) {
-			MapNode curr = pq.remove();
+			WeightedMapNode curr = pq.remove();
 			if (!visited.contains(curr)) {
 				visited.add(curr);
 				if (curr.getLocation().equals(goalNode.getLocation())) {
@@ -256,11 +259,14 @@ public class MapGraph {
 				ListIterator<MapEdge> it = neighbors.listIterator(neighbors.size());
 				while (it.hasPrevious()) {
 					MapEdge currentEdge = it.previous();
-					MapNode next = vertices.get(currentEdge.getEnd());
+					WeightedMapNode next = dijkstraVertices.get(currentEdge.getEnd());
 					if ((!visited.contains(next))) {
+
 						if (next.getDistance() > (currentEdge.getLength() + curr.getDistance())) {
 							parentMap.put(next, curr);
 							next.setDistance(currentEdge.getLength() + curr.getDistance());
+							// Hook for visualization. See writeup.
+							nodeSearched.accept(next.getLocation());
 							pq.add(next);
 
 						}
@@ -275,9 +281,14 @@ public class MapGraph {
 			return new ArrayList<GeographicPoint>();
 
 		}
+		// System.out.println("visited nodes for Dijkstra");
+		// System.out.println("**********");
+		// for (WeightedMapNode weightedMapNode : visited) {
+		// 	System.out.println(weightedMapNode.location);
+		// }
+		// System.out.println("**********");
+
 		return constructPath(startNode, goalNode, parentMap);
-		// Hook for visualization. See writeup.
-		// nodeSearched.accept(next.getLocation());
 
 	}
 
@@ -308,12 +319,67 @@ public class MapGraph {
 	 */
 	public List<GeographicPoint> aStarSearch(GeographicPoint start, GeographicPoint goal,
 			Consumer<GeographicPoint> nodeSearched) {
-		// TODO: Implement this method in WEEK 4
+		WeightedMapNode startNode = new WeightedMapNode(vertices.get(start));
+		WeightedMapNode goalNode = new WeightedMapNode(vertices.get(goal));
+		if ((startNode == null) || (goalNode == null)) {
+			return new LinkedList<>();
+		}
+		HashMap<GeographicPoint, WeightedMapNode> dijkstraVertices = new HashMap<>();
+		PriorityQueue<WeightedMapNode> pq = new PriorityQueue<>();
+		HashSet<WeightedMapNode> visited = new HashSet<>();
+		HashMap<WeightedMapNode, WeightedMapNode> parentMap = new HashMap<>();
+		boolean found = false;
+		// init
+		for (MapNode mapNode : this.vertices.values()) {
+			dijkstraVertices.put(mapNode.location, new WeightedMapNode(mapNode, Double.MAX_VALUE, Double.MAX_VALUE));
+		}
+		startNode.setDistance(0);
+		startNode.setPredictedDistance(0);
+		pq.add(startNode);
+		while (!pq.isEmpty()) {
+			WeightedMapNode curr = pq.remove();
+			if (!visited.contains(curr)) {
+				visited.add(curr);
+				if (curr.getLocation().equals(goalNode.getLocation())) {
+					found = true;
+					break;
+				}
+				List<MapEdge> neighbors = curr.getEdges();
+				ListIterator<MapEdge> it = neighbors.listIterator(neighbors.size());
+				while (it.hasPrevious()) {
+					MapEdge currentEdge = it.previous();
+					WeightedMapNode next = dijkstraVertices.get(currentEdge.getEnd());
+					if ((!visited.contains(next))) {
 
-		// Hook for visualization. See writeup.
-		// nodeSearched.accept(next.getLocation());
+						if (next.getDistance() > (currentEdge.getLength() + curr.getDistance())) {
+							parentMap.put(next, curr);
+							next.setDistance(currentEdge.getLength() + curr.getDistance());
+							next.setPredictedDistance(currentEdge.getEnd().distance(goalNode.location));
+							// Hook for visualization. See writeup.
+							nodeSearched.accept(next.getLocation());
+							pq.add(next);
 
-		return null;
+						}
+
+					}
+				}
+
+			}
+		}
+
+		if (!found) {
+			return new ArrayList<GeographicPoint>();
+
+		}
+		// System.out.println("visited nodes for a star");
+		// System.out.println("**********");
+		// for (WeightedMapNode weightedMapNode : visited) {
+		// 	System.out.println(weightedMapNode.location);
+		// }
+		// System.out.println("**********");
+
+		return constructPath(startNode, goalNode, parentMap);
+
 	}
 
 	public static void main(String[] args) {
@@ -356,15 +422,25 @@ public class MapGraph {
 		GeographicPoint testEnd = new GeographicPoint(8.0, -1.0);
 		// List<GeographicPoint> path = simpleTestMap.bfs(testStart, testEnd);
 		// for (GeographicPoint geographicPoint : path) {
-		// System.out.println(geographicPoint);
+		// 	System.out.println(geographicPoint);
 		// }
-
 		System.out.println("Test 1 using simpletest: Dijkstra should be 9 and AStar should be 5");
+		System.out.println("***********");
+		System.out.println("testing dijkstra");
 		List<GeographicPoint> testroute = simpleTestMap.dijkstra(testStart, testEnd);
 		for (GeographicPoint geographicPoint : testroute) {
 			System.out.println(geographicPoint);
 		}
-		// List<GeographicPoint> testroute2 = simpleTestMap.aStarSearch(testStart, testEnd);
+		System.out.println("***********");
+		System.out.println("testing AStar");
+		List<GeographicPoint> testrouteForAStar = simpleTestMap.aStarSearch(testStart, testEnd);
+		for (GeographicPoint geographicPoint : testrouteForAStar) {
+			System.out.println(geographicPoint);
+		}
+		System.out.println("***********");
+
+		// List<GeographicPoint> testroute2 = simpleTestMap.aStarSearch(testStart,
+		// testEnd);
 		/*
 		 * 
 		 * MapGraph testMap = new MapGraph();
