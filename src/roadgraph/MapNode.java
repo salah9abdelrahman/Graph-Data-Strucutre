@@ -2,22 +2,23 @@ package roadgraph;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import geography.GeographicPoint;
 
-public class MapNode implements Comparable<MapNode> {
-    private GeographicPoint location;
-    private List<MapEdge> edges;
-    private double distance;
+public class MapNode {
+    protected GeographicPoint location;
+    protected List<MapEdge> edges;
+    // protected double distance;
 
     public MapNode() {
         this.edges = new ArrayList<>();
-        this.distance = Integer.MAX_VALUE;
+        // this.distance = Integer.MAX_VALUE;
     }
 
     public MapNode(double distance) {
         this();
-        this.distance = distance;
+        // this.distance = distance;
     }
 
     public MapNode(GeographicPoint location) {
@@ -45,27 +46,26 @@ public class MapNode implements Comparable<MapNode> {
         this.edges.add(new MapEdge(start, end, streetName, roadType, length));
     }
 
-    public double getDistance() {
-        return this.distance;
-    }
-
-    public void setDistance(double distance) {
-        this.distance = distance;
+    @Override
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+        if (!(o instanceof MapNode)) {
+            return false;
+        }
+        MapNode mapNode = (MapNode) o;
+        return location == mapNode.location;
     }
 
     @Override
-    public int compareTo(MapNode mapNode) {
-        if (this.distance > mapNode.distance) {
-            return 1;
-        } else if (this.distance < mapNode.distance) {
-            return -1;
-        }
-        return 0;
+    public int hashCode() {
+        return Objects.hash(location);
     }
+
 
     @Override
     public String toString() {
-        return "{" + " location='" + getDistance() + "'" + "}";
+        return "{" + " location='" + getLocation() + "'" + "}";
     }
 
 }
